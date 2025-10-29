@@ -167,6 +167,9 @@
             <a class="nav-link js-scroll" href="profileDetailed.php">Профиль</a>
           </li>
           <li class="nav-item">
+            <a class="nav-link js-scroll" href="profileDetailed.php">Заказы</a>
+          </li>
+          <li class="nav-item">
             <a class="nav-link js-scroll" href="registration/logout.php">Выход</a>
           </li>
         </ul>

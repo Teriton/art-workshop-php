@@ -22,7 +22,7 @@ function cancelBooking($con, $user_id, $session_id) {
  */
 function bookSession($con, $user_id, $session_id) {
     // Проверяем, не забронирован ли уже
-    $stmt = mysqli_prepare($con, "SELECT 1 FROM booking WHERE user_id = ? AND session_id = ?");
+    $stmt = mysqli_prepare($con, 'SELECT 1 FROM booking WHERE user_id = ? AND session_id = ?');
     mysqli_stmt_bind_param($stmt, "ii", $user_id, $session_id);
     mysqli_stmt_execute($stmt);
     if (mysqli_stmt_get_result($stmt)->num_rows > 0) {
@@ -37,11 +37,59 @@ function bookSession($con, $user_id, $session_id) {
         return false; // сеанс не существует
     }
 
-    // Создаём бронь
-    $stmt = mysqli_prepare($con, "INSERT INTO booking (user_id, session_id, status) VALUES (?, ?, 'confirmed')");
-    mysqli_stmt_bind_param($stmt, "ii", $user_id, $session_id);
-    return mysqli_stmt_execute($stmt);
-}
+    // Начинаем транзакцию (рекомендуется для атомарности)
+    mysqli_begin_transaction($con);
+
+    try {
+        // Создаём бронь
+        $stmt = mysqli_prepare($con, "INSERT INTO booking (user_id, session_id, status) VALUES (?, ?, 'confirmed')");
+        mysqli_stmt_bind_param($stmt, "ii", $user_id, $session_id);
+        if (!mysqli_stmt_execute($stmt)) {
+            throw new Exception("Ошибка при создании брони");
+        }
+
+        // Получаем ID созданной брони
+        $booking_id = mysqli_insert_id($con);
+
+        // Получаем workshop_id из session
+        $stmt = mysqli_prepare($con, "SELECT workshop_id FROM session WHERE session_id = ?");
+        mysqli_stmt_bind_param($stmt, "i", $session_id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $session_row = mysqli_fetch_assoc($result);
+        if (!$session_row) {
+            throw new Exception("Не удалось найти workshop_id для сеанса");
+        }
+        $workshop_id = $session_row['workshop_id'];
+
+        // Получаем стоимость из workshop
+        $stmt = mysqli_prepare($con, "SELECT cost FROM workshop WHERE workshop_id = ?");
+        mysqli_stmt_bind_param($stmt, "i", $workshop_id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $workshop_row = mysqli_fetch_assoc($result);
+        if (!$workshop_row) {
+            throw new Exception("Не удалось найти стоимость воркшопа");
+        }
+        $cost = $workshop_row['cost'];
+
+        // Создаём платеж
+        $stmt = mysqli_prepare($con, "INSERT INTO payment (user_id, booking_id, status, amount, payment_date) VALUES (?, ?, 'pending', ?, NOW())");
+        mysqli_stmt_bind_param($stmt, "iid", $user_id, $booking_id, $cost);
+        if (!mysqli_stmt_execute($stmt)) {
+            throw new Exception("Ошибка при создании платежа");
+        }
+
+        // Фиксируем транзакцию
+        mysqli_commit($con);
+        return true;
+
+    } catch (Exception $e) {
+        mysqli_rollback($con);
+        error_log("Ошибка при бронировании: " . $e->getMessage());
+        return false;
+    }
+} 
 
    $con=mysqli_connect('localhost','root','','art_test');
    session_start();
