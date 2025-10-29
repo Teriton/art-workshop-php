@@ -158,6 +158,7 @@ if (isset($_POST['cancel_session_id'])) {
   
 if (isset($_POST['workshop'])) {
     // 1. Получаем данные из формы
+    var_dump($_POST);
     $wname     = trim($_POST['wname'] ?? '');
     $venue     = trim($_POST['venue'] ?? '');
     $status    = trim($_POST['status'] ?? '');

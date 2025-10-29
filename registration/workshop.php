@@ -44,11 +44,11 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <select name="status" class="form-input" required>
+                    <select name="diff_level" class="form-input" required>
                         <option value="">Выберите уровень сложности</option>
-                        <option value="актуальный">Новичок (справится даже ребенок)</option>
-                        <option value="отмененный">Средний (потребуется точность и аккуратность)</option>
-                        <option value="закрытый">Продвинутый (для людей с некоторым опытом, желающих научиться новым приемам)</option>
+                        <option value="Новичок">Новичок (справится даже ребенок)</option>
+                        <option value="Средний">Средний (потребуется точность и аккуратность)</option>
+                        <option value="Продвинутый">Продвинутый (для людей с некоторым опытом, желающих научиться новым приемам)</option>
                     </select>
                 </div>
                 <div class="form-group">
