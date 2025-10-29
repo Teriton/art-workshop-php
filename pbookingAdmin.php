@@ -226,7 +226,6 @@ $sql = "
   JOIN technique t ON w.technique_id=t.technique_id
   JOIN master m ON w.master_id=m.master_id
   JOIN session s ON w.workshop_id=s.workshop_id
-  WHERE w.status='актуальный'
   ORDER BY s.session_date, s.start_time";
 $result = mysqli_query($con, $sql);
 

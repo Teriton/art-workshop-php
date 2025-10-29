@@ -215,159 +215,116 @@
   }
 </style>
 
-  <!--/ Nav Star /-->
-  <nav class="navbar navbar-b navbar-trans navbar-expand-md fixed-top" id="mainNav">
-    <div class="container">
-      <a class="navbar-brand js-scroll" href="#page-top">Art WorkShop</a>
-      <button class="navbar-toggler collapsed" type="button" data-toggle="collapse" data-target="#navbarDefault"
-        aria-controls="navbarDefault" aria-expanded="false" aria-label="Toggle navigation">
-        <span></span><span></span><span></span>
-      </button>
-      <div class="navbar-collapse collapse justify-content-end" id="navbarDefault">
-        <ul class="navbar-nav">
-          <li class="nav-item">
-            <a class="nav-link js-scroll active" href="profile.php">Назад</a>
-          </li>
-        </ul>
-      </div>
+<!--/ Nav Star /-->
+<nav class="navbar navbar-b navbar-trans navbar-expand-md fixed-top" id="mainNav">
+  <div class="container">
+    <a class="navbar-brand js-scroll" href="#page-top">Art WorkShop</a>
+    <button class="navbar-toggler collapsed" type="button" data-toggle="collapse" data-target="#navbarDefault"
+      aria-controls="navbarDefault" aria-expanded="false" aria-label="Toggle navigation">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="navbar-collapse collapse justify-content-end" id="navbarDefault">
+      <ul class="navbar-nav">
+        <li class="nav-item">
+          <a class="nav-link js-scroll active" href="profile.php">Назад</a>
+        </li>
+      </ul>
     </div>
-  </nav>
-  <!--/ Nav End /-->
+  </div>
+</nav>
+<!--/ Nav End /-->
 
 <!--/ Intro Skew Star /-->
 <div id="home" class="intro route bg-image" style="background-image: url(img/info_back1.jpg); background-size: cover;">
   <div class="overlay-itro"></div>
   <br><br><br><hr>
 
-  <div class="container mt-5" id="workshops">
+  <!-- Только платежи -->
+  <div class="container mt-5" id="payments">
     <div class="card p-3">
-      <h2 class="text-center">Расписание</h2>
+      <h2 class="text-center">Мои заказы</h2>
 
-<?php
-$con = mysqli_connect('localhost', 'root', '', 'art_test');
-if (!$con) {
-    die("Connection failed: " . mysqli_connect_error());
-}
+      <?php
+      $con = mysqli_connect('localhost', 'root', '', 'art_test');
+      if (!$con) {
+          die("Connection failed: " . mysqli_connect_error());
+      }
 
-if (!isset($_SESSION['uid'])) {
-    echo "<p class='text-white text-center'>Please log in to view workshops.</p>";
-} else {
-    $user_id = (int)$_SESSION['uid'];
+      if (!isset($_SESSION['uid'])) {
+          echo "<p class='text-white text-center'>Пожалуйста, войдите в систему, чтобы увидеть ваши платежи.</p>";
+      } else {
+          $user_id = (int)$_SESSION['uid'];
 
-    $sql = "
-        SELECT 
-            w.workshop_id,
-            w.name AS workshop_name,
-            w.cost,
-            w.difficulty_level,
-            w.description AS workshop_description,
-            t.name AS technique_name,
-            m.first_name AS master_first_name,
-            m.last_name AS master_last_name,
-            s.session_id,
-            s.session_date,
-            s.start_time,
-            s.end_time,
-            CASE 
-                WHEN b.booking_id IS NOT NULL THEN 1 
-                ELSE 0 
-            END AS is_booked
-        FROM workshop w
-        INNER JOIN technique t ON w.technique_id = t.technique_id
-        INNER JOIN master m ON w.master_id = m.master_id
-        INNER JOIN session s ON w.workshop_id = s.workshop_id
-        LEFT JOIN booking b ON s.session_id = b.session_id AND b.user_id = ?
-        WHERE w.status = 'актуальный'
-        ORDER BY s.session_date, s.start_time";
+          // Запрос платежей
+          $sql = "
+              SELECT 
+                  p.payment_id,
+                  p.amount,
+                  p.status AS payment_status,
+                  p.payment_date,
+                  w.name AS workshop_name,
+                  s.session_date,
+                  s.start_time,
+                  s.end_time
+              FROM payment p
+              INNER JOIN booking b ON p.booking_id = b.booking_id
+              INNER JOIN session s ON b.session_id = s.session_id
+              INNER JOIN workshop w ON s.workshop_id = w.workshop_id
+              WHERE p.user_id = ?
+              ORDER BY p.payment_date DESC";
 
-    $stmt = mysqli_prepare($con, $sql);
-    mysqli_stmt_bind_param($stmt, "i", $user_id);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
+          $stmt = mysqli_prepare($con, $sql);
+          mysqli_stmt_bind_param($stmt, "i", $user_id);
+          mysqli_stmt_execute($stmt);
+          $result = mysqli_stmt_get_result($stmt);
 
-    if (mysqli_num_rows($result) > 0) {
-        echo '<div class="scrollable-workshops">';
-        echo '<table class="table table-hover">';
-        echo '<thead><tr>
-                <th>Название</th>
-                <th>Техника</th>
-                <th>Уровень</th>
-                <th>Дата и время</th>
-                <th>Стоимость</th>
-                <th>Бронь</th>
-              </tr></thead><tbody>';
+          if (mysqli_num_rows($result) > 0) {
+              echo '<div class="table-responsive mt-3">';
+              echo '<table class="table table-bordered table-dark text-white">';
+              echo '<thead><tr>
+                      <th>Воркшоп</th>
+                      <th>Дата сеанса</th>
+                      <th>Сумма</th>
+                      <th>Статус</th>
+                      <th>Дата платежа</th>
+                      <th>Действие</th>
+                    </tr></thead><tbody>';
 
-        while ($row = mysqli_fetch_assoc($result)) {
-            $workshop_id = $row['workshop_id'];
-            $session_id = $row['session_id'];
-            $is_booked = (bool)$row['is_booked'];
-            $date_time = date("d.m.Y", strtotime($row['session_date'])) . 
-                         " (" . substr($row['start_time'], 0, 5) . "–" . substr($row['end_time'], 0, 5) . ")";
-            $modalId = "modal-ws-" . $workshop_id;
+              while ($row = mysqli_fetch_assoc($result)) {
+                  $date_time = date("d.m.Y", strtotime($row['session_date'])) . 
+                               " (" . substr($row['start_time'], 0, 5) . "–" . substr($row['end_time'], 0, 5) . ")";
+                  $statusLabel = $row['payment_status'] === 'pending' ? 'Не оплачено' : 'Оплачено';
+                  $statusClass = $row['payment_status'] === 'pending' ? 'text-warning' : 'text-success';
 
-            echo "<tr>";
-            echo "<td>" . htmlspecialchars($row['workshop_name']) . "</td>";
-            echo "<td>" . htmlspecialchars($row['technique_name']) . "</td>";
-            echo "<td>" . htmlspecialchars($row['difficulty_level']) . "</td>";
-            echo "<td>$date_time</td>";
-            echo "<td>" . number_format($row['cost'], 2) . "</td>";
-            echo "<td>
-                    <button type='button' class='btn btn-sm btn-outline-info me-2' data-bs-toggle='modal' data-bs-target='#{$modalId}'>
-                      Детали
-                    </button>";
-            if ($is_booked) {
-                echo "<form method='POST' action='action.php' style='display:inline;'>
-                        <input type='hidden' name='cancel_session_id' value='$session_id' />
-                        <button type='submit' class='btn btn-sm btn-outline-danger'>Отменить</button>
-                      </form>";
-            } else {
-                echo "<form method='POST' action='action.php' style='display:inline;'>
-                        <input type='hidden' name='book_session_id' value='$session_id' />
-                        <button type='submit' class='btn btn-sm btn-outline-success'>Забронировать</button>
-                      </form>";
-            }
-            echo "</td></tr>";
+                  echo "<tr>";
+                  echo "<td>" . htmlspecialchars($row['workshop_name']) . "</td>";
+                  echo "<td>$date_time</td>";
+                  echo "<td>" . number_format($row['amount'], 2) . "</td>";
+                  echo "<td class='$statusClass'>$statusLabel</td>";
+                  echo "<td>" . ($row['payment_date'] ? date("d.m.Y H:i", strtotime($row['payment_date'])) : '—') . "</td>";
+                  echo "<td>";
+                  if ($row['payment_status'] === 'pending') {
+                      echo "<a href='registration/pay.php?payment_id=" . $row['payment_id'] . "' class='btn btn-sm btn-primary'>Оплатить</a>";
+                  } else {
+                      echo "<span class='text-muted'>—</span>";
+                  }
+                  echo "</td>";
+                  echo "</tr>";
+              }
 
-            // Модальное окно
-            echo '
-            <div class="modal fade" id="' . $modalId . '" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-              <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content bg-dark text-white">
-                  <div class="modal-header">
-                    <h5 class="modal-title">' . htmlspecialchars($row['workshop_name']) . '</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                  </div>
-                  <div class="modal-body">
-                    <p><strong>Мастер:</strong> ' . htmlspecialchars($row['master_first_name'] . ' ' . $row['master_last_name']) . '</p>
-                    <p><strong>Техника:</strong> ' . htmlspecialchars($row['technique_name']) . '</p>
-                    <p><strong>Сложность:</strong> ' . htmlspecialchars($row['difficulty_level']) . '</p>
-                    <p><strong>Стоимость:</strong> ' . number_format($row['cost'], 2) . '</p>
-                    <p><strong>Дата и время:</strong> ' . $date_time . '</p>
-                    <hr>
-                    <p><strong>Что вас ждет:</strong></p>
-                    <p>' . nl2br(htmlspecialchars($row['workshop_description'])) . '</p>
-                  </div>
-                  <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
-                  </div>
-                </div>
-              </div>
-            </div>';
-        }
-
-        echo '</tbody></table></div>';
-    } else {
-        echo "<p class='text-white text-center'>No available workshops.</p>";
-    }
-}
-mysqli_close($con);
-?>
+              echo '</tbody></table></div>';
+          } else {
+              echo "<p class='text-white text-center mt-4'>У вас пока нет заказов.</p>";
+          }
+      }
+      mysqli_close($con);
+      ?>
     </div>
   </div>
 </div>
 
-  <a href="#" class="back-to-top"><i class="fa fa-chevron-up"></i></a>
-  <div id="preloader"></div>
+<a href="#" class="back-to-top"><i class="fa fa-chevron-up"></i></a>
+<div id="preloader"></div>
 
   <!-- JavaScript Libraries -->
   <script src="lib/jquery/jquery.min.js"></script>

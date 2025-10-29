@@ -181,7 +181,7 @@
         <hr>
         <?php
           $con = mysqli_connect('localhost','root','','art_test');
-          $sql = "SELECT * FROM workshop ORDER BY workshop_id DESC LIMIT 1";
+          $sql = "SELECT * FROM workshop WHERE status='актуальный' ORDER BY workshop_id DESC LIMIT 1";
           $run = mysqli_query($con, $sql);
           if (mysqli_num_rows($run) == 0) {
             echo "<h1 class='intro-title mb-4'>Мастерская искусств</h1>
