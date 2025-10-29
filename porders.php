@@ -262,6 +262,7 @@
                   p.amount,
                   p.status AS payment_status,
                   p.payment_date,
+                  p.payment_method,
                   w.name AS workshop_name,
                   s.session_date,
                   s.start_time,
@@ -290,28 +291,42 @@
                       <th>Действие</th>
                     </tr></thead><tbody>';
 
-              while ($row = mysqli_fetch_assoc($result)) {
-                  $date_time = date("d.m.Y", strtotime($row['session_date'])) . 
-                               " (" . substr($row['start_time'], 0, 5) . "–" . substr($row['end_time'], 0, 5) . ")";
-                  $statusLabel = $row['payment_status'] === 'pending' ? 'Не оплачено' : 'Оплачено';
-                  $statusClass = $row['payment_status'] === 'pending' ? 'text-warning' : 'text-success';
+            while ($row = mysqli_fetch_assoc($result)) {
+                $date_time = date("d.m.Y", strtotime($row['session_date'])) . 
+                            " (" . substr($row['start_time'], 0, 5) . "–" . substr($row['end_time'], 0, 5) . ")";
 
-                  echo "<tr>";
-                  echo "<td>" . htmlspecialchars($row['workshop_name']) . "</td>";
-                  echo "<td>$date_time</td>";
-                  echo "<td>" . number_format($row['amount'], 2) . "</td>";
-                  echo "<td class='$statusClass'>$statusLabel</td>";
-                  echo "<td>" . ($row['payment_date'] ? date("d.m.Y H:i", strtotime($row['payment_date'])) : '—') . "</td>";
-                  echo "<td>";
-                  if ($row['payment_status'] === 'pending') {
-                      echo "<a href='registration/pay.php?payment_id=" . $row['payment_id'] . "' class='btn btn-sm btn-primary'>Оплатить</a>";
-                  } else {
-                      echo "<span class='text-muted'>—</span>";
-                  }
-                  echo "</td>";
-                  echo "</tr>";
-              }
+                // Определяем отображаемый статус
+                if ($row['payment_status'] === 'pending') {
+                    $displayStatus = 'Не оплачено';
+                    $statusClass = 'text-warning';
+                } elseif ($row['payment_status'] === 'completed') {
+                    if ($row['payment_method'] === 'cash') {
+                        $displayStatus = 'Оплата на месте';
+                        $statusClass = 'text-info';
+                    } else {
+                        $displayStatus = 'Оплачено';
+                        $statusClass = 'text-success';
+                    }
+                } else {
+                    $displayStatus = htmlspecialchars($row['payment_status']);
+                    $statusClass = 'text-secondary';
+                }
 
+                echo "<tr>";
+                echo "<td>" . htmlspecialchars($row['workshop_name']) . "</td>";
+                echo "<td>$date_time</td>";
+                echo "<td>" . number_format($row['amount'], 2) . "</td>";
+                echo "<td class='$statusClass'>$displayStatus</td>";
+                echo "<td>" . ($row['payment_date'] ? date("d.m.Y H:i", strtotime($row['payment_date'])) : '—') . "</td>";
+                echo "<td>";
+                if ($row['payment_status'] === 'pending') {
+                    echo "<a href='registration/pay.php?payment_id=" . $row['payment_id'] . "' class='btn btn-sm btn-primary'>Оплатить</a>";
+                } else {
+                    echo "<span class='text-muted'>—</span>";
+                }
+                echo "</td>";
+                echo "</tr>";
+            }
               echo '</tbody></table></div>';
           } else {
               echo "<p class='text-white text-center mt-4'>У вас пока нет заказов.</p>";

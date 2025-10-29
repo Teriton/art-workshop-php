@@ -222,4 +222,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_payment'])) {
 <script src="vendor/jquery/jquery.min.js"></script>
 <script src="js/main.js"></script>
 </body>
-</html>
+</html> 
